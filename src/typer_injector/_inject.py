@@ -8,6 +8,11 @@ from ._types import Depends, ParameterSourceEntry
 from .exceptions import CircularDependencyError, ParameterNameConflictError, TyperInjectorError
 
 
+def get_signature(func: Callable[..., Any]) -> inspect.Signature:
+    """Get the signature of a function, evaluating string annotations if necessary."""
+    return signature(func, eval_str=True)
+
+
 def get_depends(annotation: Any) -> Depends | None:
     """Retrieve the `Depends` metadata from an annotation, if present."""
     if get_origin(annotation) is Annotated:
@@ -37,7 +42,7 @@ def collect_params(
     if processed_dependencies is None:
         processed_dependencies = set()
 
-    sig = signature(func)
+    sig = get_signature(func)
     for param in sig.parameters.values():
         if not (depends := get_depends(param.annotation)):
             yield FlattenedParam(param.replace(kind=Parameter.KEYWORD_ONLY), source)
@@ -52,7 +57,7 @@ def collect_params(
             continue
         processed_dependencies.add(depends)
 
-        dependency_sig = signature(depends.dependency)
+        dependency_sig = get_signature(depends.dependency)
         for dep_param in dependency_sig.parameters.values():
             if dep_param.kind == Parameter.POSITIONAL_ONLY:
                 raise TyperInjectorError('Positional-only parameters are not supported in dependencies')
@@ -70,7 +75,7 @@ def invoke_with_dependencies(
     resolved_dependencies: dict[Depends, Any],
 ) -> Any:
     """Invoke `func` with `kwargs`, recursively resolving and caching dependencies."""
-    sig = signature(func)
+    sig = get_signature(func)
     func_kwargs: dict[str, Any] = {}
     for param in sig.parameters.values():
         if depends := get_depends(param.annotation):
@@ -99,7 +104,7 @@ def flatten_signature(func: Callable[..., Any]) -> inspect.Signature:
         new_params[param.name] = param
         param_sources[param.name] = source
 
-    return signature(func).replace(parameters=list(new_params.values()))
+    return get_signature(func).replace(parameters=list(new_params.values()))
 
 
 def inject(func: Callable[..., Any]) -> Callable[..., Any]:
