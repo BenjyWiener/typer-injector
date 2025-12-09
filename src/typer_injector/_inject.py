@@ -1,19 +1,33 @@
 from collections.abc import Iterator
-from functools import update_wrapper
+from functools import lru_cache, update_wrapper
 import inspect
 from inspect import Parameter, signature
-from typing import Annotated, Any, Callable, NamedTuple, get_origin
+import sys
+from typing import Annotated, Any, Callable, NamedTuple, Optional, get_origin, get_type_hints
 
 from ._types import Depends, ParameterSourceEntry
 from .exceptions import CircularDependencyError, ParameterNameConflictError, TyperInjectorError
 
 
+@lru_cache(maxsize=10)
 def get_signature(func: Callable[..., Any]) -> inspect.Signature:
     """Get the signature of a function, evaluating string annotations if necessary."""
-    return signature(func, eval_str=True)
+    if sys.version_info >= (3, 10):
+        return signature(func, eval_str=True)
+
+    sig = signature(func)
+    # In Python <= 3.9, insepct.signature doesn't support evaluation of string annotations.
+    # As a workaround we use typing.get_type_hints, which does evaluate strings.
+    type_hints = get_type_hints(func, include_extras=True)
+    return sig.replace(
+        parameters=[
+            (param.replace(annotation=type_hints.get(param.name, param.annotation)) if isinstance(param.annotation, str) else param)
+            for param in sig.parameters.values()
+        ]
+    )
 
 
-def get_depends(annotation: Any) -> Depends | None:
+def get_depends(annotation: Any) -> Optional[Depends]:
     """Retrieve the `Depends` metadata from an annotation, if present."""
     if get_origin(annotation) is Annotated:
         for meta in annotation.__metadata__:
@@ -31,7 +45,7 @@ class FlattenedParam(NamedTuple):
 def collect_params(
     func: Callable[..., Any],
     source: tuple[ParameterSourceEntry, ...] = (),
-    processed_dependencies: set[Depends] | None = None,
+    processed_dependencies: Optional[set[Depends]] = None,
 ) -> Iterator[FlattenedParam]:
     """Iterate over the parameters of `func`, recursing into dependencies' parameters.
 
