@@ -2,6 +2,7 @@
 
 [![PyPI - Version](https://img.shields.io/pypi/v/typer-injector.svg)](https://pypi.org/project/typer-injector)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/typer-injector.svg)](https://pypi.org/project/typer-injector)
+[![Coverage](https://coverage-badge.samuelcolvin.workers.dev/benjywiener/typer-injector.svg)](https://coverage-badge.samuelcolvin.workers.dev/redirect/benjywiener/typer-injector)
 
 -----
 
