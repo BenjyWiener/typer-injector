@@ -20,14 +20,6 @@ def _stringify_source(source: tuple[ParameterSourceEntry, ...], root_func: Any) 
         depth += 1
     return source_str + root_func.__qualname__
 
-    source_str = root_func.__qualname__
-    depth = 1
-    for entry in reversed(source):
-        indent = '    ' * depth
-        source_str += f'\n{indent}from parameter {entry.name}: {entry.depends}'
-        depth += 1
-    return source_str
-
 
 class ParameterNameConflictError(TyperInjectorError):
     """Raised when two parameters with the same name are found in a flattened signature."""
