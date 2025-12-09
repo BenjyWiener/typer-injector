@@ -40,6 +40,8 @@ jobs:
   coverage-merge:
     needs: [test]
     runs-on: ubuntu-latest
+    permissions:
+      statuses: write
     steps:
       - uses: actions/checkout@v6
       - name: Set up Python 3.14
@@ -55,4 +57,21 @@ jobs:
           path: coverage
           merge-multiple: true
       - run: coverage combine coverage/*
+      - name: Create coverage status
+        run: |
+          coverage="$(coverage report --format=total)"
+          state="$([[ "$coverage" = "100.00" ]] && echo "success" || echo "failure")"
+
+          curl -sS --fail-with-body -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }} \
+            -d @- <<EOF
+          {
+            "state": "${state}",
+            "context": "coverage",
+            "description": "Coverage ${coverage}%",
+            "target_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          }
+          EOF
       - run: coverage report --fail-under=100
