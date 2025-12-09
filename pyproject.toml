@@ -18,10 +18,10 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = ["typer>=0.20.0"]
+dependencies = ["typer-slim>=0.20.0"]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["coverage", "pytest", "pytest-cov"]
 
 [project.urls]
 Documentation = "https://github.com/Benjy/typer-injector#readme"
@@ -38,11 +38,11 @@ source = "vcs"
 [tool.coverage.run]
 source_pkgs = ["typer_injector", "tests"]
 branch = true
-parallel = true
 
 [tool.coverage.paths]
-typer_injector = ["src/typer_injector", "*/typer-injector/src/typer_injector"]
-tests = ["tests", "*/typer-injector/tests"]
+typer_injector = ["src/typer_injector"]
+tests = ["tests"]
 
 [tool.coverage.report]
-exclude_lines = ["no cov", "if __name__ == .__main__.:", "if TYPE_CHECKING:"]
+precision = 2
+exclude_lines = ['pragma: no cover']

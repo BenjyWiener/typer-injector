@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 from typing_extensions import Annotated
 
 from typer_injector import Depends, InjectingTyper
-from typer_injector.exceptions import CircularDependencyError, ParameterNameConflictError
+from typer_injector.exceptions import CircularDependencyError, ParameterNameConflictError, TyperInjectorError
 
 
 def test_simple_dependency() -> None:
@@ -27,6 +27,26 @@ def test_simple_dependency() -> None:
         ['--a', 'hello', '--b', '1337'],
         standalone_mode=False,
     ).return_value == ('hello', 1337)
+
+
+def test_argument_dependency() -> None:
+    """Test a dependency with positional arguments."""
+    app = InjectingTyper()
+
+    def simple_dependency(a: str, b: int) -> tuple[str, int]:
+        return a, b
+
+    @app.command()
+    def cmd(dep: Annotated[tuple[str, int], Depends(simple_dependency)], c: str) -> tuple[tuple[str, int], str]:
+        return dep, c
+
+    runner = CliRunner()
+
+    assert runner.invoke(
+        app,
+        ['hello', '1337', 'world'],
+        standalone_mode=False,
+    ).return_value == (('hello', 1337), 'world')
 
 
 def test_nested_dependency() -> None:
@@ -88,7 +108,7 @@ def test_parameter_conflict() -> None:
     app = InjectingTyper()
 
     def conflicting_dependency(a: Annotated[str, typer.Option()]) -> str:
-        return a
+        return a  # pragma: no cover
 
     with pytest.raises(ParameterNameConflictError):
 
@@ -97,7 +117,7 @@ def test_parameter_conflict() -> None:
             a: Annotated[str, typer.Option()],
             dep: Annotated[str, Depends(conflicting_dependency)],
         ) -> None:
-            pass
+            pass  # pragma: no cover
 
 
 def test_circular_dependency() -> None:
@@ -107,10 +127,10 @@ def test_circular_dependency() -> None:
     global dep_b  # necessary for evaluation of forward reference
 
     def dep_a(b: 'Annotated[str, Depends(dep_b)]') -> str:
-        return b
+        return b  # pragma: no cover
 
     def dep_b(a: Annotated[str, Depends(dep_a)]) -> str:
-        return a
+        return a  # pragma: no cover
 
     with pytest.raises(CircularDependencyError):
 
@@ -118,4 +138,20 @@ def test_circular_dependency() -> None:
         def cmd(
             dep: Annotated[str, Depends(dep_a)],
         ) -> None:
-            pass
+            pass  # pragma: no cover
+
+
+def test_positional_only_parameter() -> None:
+    """Test that positional-only parameters in dependencies raise an error."""
+    app = InjectingTyper()
+
+    def pos_only_dependency(a: str, /) -> str:
+        return a  # pragma: no cover
+
+    with pytest.raises(TyperInjectorError, match=r'Positional-only parameter'):
+
+        @app.command()
+        def cmd(
+            dep: Annotated[str, Depends(pos_only_dependency)],
+        ) -> None:
+            pass  # pragma: no cover
