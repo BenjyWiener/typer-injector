@@ -117,5 +117,5 @@ def inject(func: Callable[..., Any]) -> Callable[..., Any]:
         return invoke_with_dependencies(func, kwargs, {})
 
     update_wrapper(wrapper, func)
-    wrapper.__signature__ = new_signature
+    wrapper.__signature__ = new_signature  # pyright: ignore[reportFunctionMemberAccess]
     return wrapper
