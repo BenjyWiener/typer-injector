@@ -49,6 +49,28 @@ def test_argument_dependency() -> None:
     ).return_value == (('hello', 1337), 'world')
 
 
+def test_stringified_annotations() -> None:
+    """Test a command with stringified annotations."""
+    app = InjectingTyper()
+
+    global simple_dependency  # necessary for evaluation of string annotation
+
+    def simple_dependency(a: 'Annotated[str, typer.Option()]', b: 'Annotated[int, typer.Option()]') -> 'tuple[str, int]':
+        return a, b
+
+    @app.command()
+    def cmd(dep: 'Annotated[tuple[str, int], Depends(simple_dependency)]') -> 'tuple[str, int]':
+        return dep
+
+    runner = CliRunner()
+
+    assert runner.invoke(
+        app,
+        ['--a', 'hello', '--b', '1337'],
+        standalone_mode=False,
+    ).return_value == ('hello', 1337)
+
+
 def test_nested_dependency() -> None:
     """Test a nested dependency."""
     app = InjectingTyper()
