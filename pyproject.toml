@@ -25,9 +25,9 @@ dependencies = ["typer-slim>=0.20.0"]
 dev = ["coverage", "pytest", "pytest-cov"]
 
 [project.urls]
-Documentation = "https://github.com/Benjy/typer-injector#readme"
-Issues = "https://github.com/Benjy/typer-injector/issues"
-Source = "https://github.com/Benjy/typer-injector"
+Documentation = "https://github.com/BenjyWiener/typer-injector#readme"
+Issues = "https://github.com/BenjyWiener/typer-injector/issues"
+Source = "https://github.com/BenjyWiener/typer-injector"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
