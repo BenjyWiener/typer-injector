@@ -1,9 +1,10 @@
 """Unit tests."""
 
+from typing import Annotated
+
 import pytest
 import typer
 from typer.testing import CliRunner
-from typing_extensions import Annotated
 
 from typer_injector import Depends, InjectingTyper
 from typer_injector.exceptions import CircularDependencyError, ParameterNameConflictError, TyperInjectorError
