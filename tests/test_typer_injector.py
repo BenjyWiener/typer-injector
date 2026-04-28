@@ -143,6 +143,25 @@ def test_parameter_conflict() -> None:
             pass  # pragma: no cover
 
 
+def test_typer_context_parameter_conflict() -> None:
+    """Test that parameter conflict does not raise an error when both are `typer.Context`."""
+    app = InjectingTyper()
+
+    def conflicting_dependency(ctx: typer.Context) -> typer.Context:
+        return ctx
+
+    @app.command()
+    def cmd(
+        ctx: typer.Context,
+        dep: Annotated[typer.Context, Depends(conflicting_dependency)],
+    ) -> None:
+        assert dep is ctx
+
+    runner = CliRunner()
+
+    assert runner.invoke(app).exit_code == 0
+
+
 def test_circular_dependency() -> None:
     """Test that circular dependency raises an error."""
     app = InjectingTyper()

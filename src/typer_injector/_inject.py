@@ -5,6 +5,8 @@ from inspect import Parameter, signature
 import sys
 from typing import Annotated, Any, Callable, NamedTuple, Optional, get_origin, get_type_hints
 
+import typer
+
 from ._types import Depends, ParameterSourceEntry
 from .exceptions import CircularDependencyError, ParameterNameConflictError, TyperInjectorError
 
@@ -37,6 +39,10 @@ def get_depends(annotation: Any) -> Optional[Depends]:
     return None
 
 
+# Marker `Depends`, never actually called.
+TyperContextDepends = Depends(lambda: ...)
+
+
 class FlattenedParam(NamedTuple):
     parameter: Parameter
     source: tuple[ParameterSourceEntry, ...]
@@ -58,6 +64,14 @@ def collect_params(
 
     sig = get_signature(func)
     for param in sig.parameters.values():
+        if param.annotation is typer.Context:
+            # `typer.Context` requires special handling.
+            # Without this, two dependencies (or command + dependency) defining `ctx: typer.Context` would lead to a
+            # `ParameterNameConflictError`.
+            if TyperContextDepends in processed_dependencies:
+                continue
+            processed_dependencies.add(TyperContextDepends)
+
         if not (depends := get_depends(param.annotation)):
             yield FlattenedParam(param.replace(kind=Parameter.KEYWORD_ONLY), source)
             continue
@@ -92,7 +106,11 @@ def invoke_with_dependencies(
     sig = get_signature(func)
     func_kwargs: dict[str, Any] = {}
     for param in sig.parameters.values():
-        if depends := get_depends(param.annotation):
+        if param.annotation is typer.Context:
+            if TyperContextDepends not in resolved_dependencies:
+                resolved_dependencies[TyperContextDepends] = kwargs.pop(param.name)
+            func_kwargs[param.name] = resolved_dependencies[TyperContextDepends]
+        elif depends := get_depends(param.annotation):
             if depends not in resolved_dependencies:
                 # Resolve dependency and cache result
                 resolved_dependencies[depends] = invoke_with_dependencies(
