@@ -39,3 +39,4 @@ class InjectingTyper(typer.Typer):
     """Typer subclass with dependency injection support."""
 
     command = _make_injecting_command(typer.Typer.command)
+    callback = _make_injecting_command(typer.Typer.callback)

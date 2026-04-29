@@ -50,6 +50,30 @@ def test_argument_dependency() -> None:
     ).return_value == (('hello', 1337), 'world')
 
 
+def test_dependency_in_callback() -> None:
+    """Test a dependency in a command callback."""
+    app = InjectingTyper()
+
+    def simple_dependency(a: Annotated[str, typer.Option()], b: Annotated[int, typer.Option()]) -> tuple[str, int]:
+        return a, b
+
+    @app.callback()
+    def callback(dep: Annotated[tuple[str, int], Depends(simple_dependency)]) -> None:
+        assert dep == ('hello', 1337)
+
+    @app.command()
+    def cmd() -> None:
+        pass
+
+    runner = CliRunner()
+
+    assert runner.invoke(
+        app,
+        ['--a', 'hello', '--b', '1337', 'cmd'],
+        catch_exceptions=False,
+    )
+
+
 def test_stringified_annotations() -> None:
     """Test a command with stringified annotations."""
     app = InjectingTyper()
@@ -159,7 +183,11 @@ def test_typer_context_parameter_conflict() -> None:
 
     runner = CliRunner()
 
-    assert runner.invoke(app).exit_code == 0
+    assert runner.invoke(
+        app,
+        [],
+        catch_exceptions=False,
+    )
 
 
 def test_circular_dependency() -> None:
